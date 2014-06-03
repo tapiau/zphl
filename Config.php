@@ -50,5 +50,13 @@ class Config
 			$tmp = IniParser::merge($tmp, $tmp2);
 		}
 		self::$config = object($tmp[$stage]);
+
+		return self::$config;
+	}
+	public static set($array)
+	{
+		self::$config = object($array);
+
+		return self::$config;
 	}
 }

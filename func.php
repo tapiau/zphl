@@ -287,7 +287,6 @@ function url($params=array(),$mod=array())
 function autoload()
 {
 	//    ini_set('unserialize_callback_func','spl_autoload_call');
-	//
 	//    spl_autoload_register("_autoload");
 
 	function __autoload($class_name)

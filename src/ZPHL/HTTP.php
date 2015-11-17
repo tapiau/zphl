@@ -5,6 +5,8 @@
  * Date: 23.06.14 14:29
  */
 
+namespace ZPHL;
+
 class HTTP
 {
 	private $referer = null;

@@ -5,6 +5,8 @@
  * Date: 27.03.14 11:31
  */
 
+namespace ZPHL;
+
 class Cli
 {
 	public $param = null;

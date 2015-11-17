@@ -1,5 +1,7 @@
 <?php
 
+namespace ZPHL;
+
 class Config
 {
 	public static $config = null;

@@ -10,6 +10,6 @@
     },
     "autoload": {
         "psr-0": {"": "src"},
-        "files": ["src/ZPHLfunc.php"]
+        "files": ["src/ZPHL/func.php"]
     }
 }

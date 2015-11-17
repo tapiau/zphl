@@ -1,0 +1,15 @@
+{
+    "name": "tapiau/zphl",
+    "version": "0.2.0",
+
+    "require-dev": {
+        "phpspec/phpspec": "2.0.*@dev"
+    },
+    "config": {
+        "bin-dir": "bin"
+    },
+    "autoload": {
+        "psr-0": {"": "src"},
+        "files": ["src/ZPHLfunc.php"]
+    }
+}

@@ -1,35 +1,44 @@
 <?php
 
 define('__ROOT',realpath(dirname(__FILE__).'/..'));
-define('__LIB',realpath(dirname(__FILE__)));
+define('__TMP',realpath('/tmp/'));
 //define('__TMP','/tmp/');
 
-//ini_set('include_path',dirname(__FILE__).PATH_SEPARATOR.ini_get('include_path'));
-//autoload();
+ini_set('include_path',__DIR__.PATH_SEPARATOR.ini_get('include_path'));
 
-//set_error_handler(
-//    function ($errno, $errstr, $errfile, $errline)
-//    {
-//        $exception = new Exception($errstr . '; File: '.$errfile.':'.$errline, $errno);
-//        throw $exception;
-//    }
-//);
-
-function array_grep($tab,$word)
+function paranoid1()
 {
-	return array_filter(
-		$tab,
-		function ($row) use ($word)
+	set_error_handler(
+		function ($errno, $errstr, $errfile, $errline)
 		{
-			return strpos($row,$word)!==false;
+			$exception = new Exception($errstr . '; File: '.$errfile.':'.$errline, $errno);
+			throw $exception;
 		}
 	);
 }
 
-function isCli()
+function paranoid($error = null)
 {
-	return (php_sapi_name() == 'cli' && empty($_SERVER['REMOTE_ADDR']));
+	set_error_handler(
+		function ($errno, $errstr, $errfile, $errline)
+		{
+			$exception = new Exception($errstr . '; File: '.$errfile.':'.$errline, $errno);
+			throw $exception;
+		}
+	);
+
+	register_shutdown_function('paranoidError');
 }
+
+function paranoidError()
+{
+	if(@is_array($error = @error_get_last()))
+	{
+		echo "<pre>";
+		print_r($error);
+	}
+}
+
 
 function isWindows()
 {
@@ -72,19 +81,56 @@ class Object
 	}
 }
 
-function object($array=array())
+function object($array=array(),$recursive=true)
 {
 //	$obj = ((object) NULL);
 	$obj = new Object();
 	foreach($array as $key=>$value)
 	{
-		if(is_array($value))
+		if(is_integer($recursive))
 		{
-			$value = object($value);
+			$recursive--;
+
+			if($recursive===0)
+			{
+				$recursive = false;
+			}
+		}
+		if(is_array($value) && $recursive)
+		{
+			$value = object($value,$recursive);
 		}
 		$obj->$key = $value;
 	}
 	return $obj;
+}
+
+function startsWith($haystack, $needle)
+{
+	$length = strlen($needle);
+	return (substr($haystack, 0, $length) === $needle);
+}
+
+function endsWith($haystack, $needle)
+{
+	$length = strlen($needle);
+	$start  = $length * -1; //negative
+	return (substr($haystack, $start) === $needle);
+}
+
+function logerror($tab)
+{
+	global $errorFile;
+
+	$dbg = debug_backtrace();
+
+	$out = "<pre style='background-color: #efefef; border: 1px solid #aaaaaa; text-align: left;'>";
+//	$out .= "<div style='font-weight: bold; background-color: #FFF15F; border-bottom: 1px solid #aaaaaa;'>\n    {$dbg[0]['file']}:{$dbg[0]['line']}\n</div>\n";
+	$out .= print_r($tab,true);
+	$out .= "\n</pre>\n";
+	$out .= "\n";
+
+	file_put_contents($errorFile,$out,FILE_APPEND);
 }
 
 function printr($tab)
@@ -92,7 +138,7 @@ function printr($tab)
 	$dbg = debug_backtrace();
 
 	$file = "{$dbg[0]['file']}:{$dbg[0]['line']}";
-	$file = str_replace(__ROOT,'',$file);
+//	$file = str_replace(__ROOT,'',$file);
 
 	$id = uniqid();
 
@@ -119,42 +165,54 @@ function printr($tab)
 		flush();
 	}
 }
-
-function requestFilter($tab)
+function printrlog($tab)
 {
-	$out = array();
+	$dbg = debug_backtrace();
+	$msg = str_repeat('#',120)."\n";
+	$msg .= "    {$dbg[0]['file']}:{$dbg[0]['line']}\n";
+    $msg .= str_repeat('#',120)."\n";
+	$msg .= print_r($tab,true);
+	$msg .= "\n\n";
 
-	foreach($tab as $key=>$value)
-	{
-		if(is_iterable($value))
-		{
-			$out[$key] = requestFilter($value);
-			continue;
-		}
+	file_put_contents(__ROOT.'/tmp/log',$msg,FILE_APPEND);
+}
 
-		if(!str_contains($key,'.'))
-		{
-			$out[$key] = $value;
-		}
-		else
-		{
-			$prefixList = explode('.',$key);
+function requestFilter($tab,$prefix = array())
+{
+    $out = array();
 
-			$arr = &$out;
-			foreach($prefixList as $prefixStr)
-			{
-				if(!array_key_exists($prefixStr,$arr))
-				{
-					$arr[$prefixStr] = array();
-				}
-				$arr = &$arr[$prefixStr];
-			}
+    foreach($tab as $key=>$value)
+    {
+        if(is_iterable($value))
+        {
+            $out[$key] = requestFilter($value);
+            continue;
+        }
 
-			$arr = $value;
-		}
-	}
+        if(!str_contains($key,'.'))
+        {
+            $out[$key] = $value;
+        }
+        else
+        {
+            $prefixList = explode('.',$key);
 
-	return $out;
+            $arr = &$out;
+            foreach($prefixList as $prefixStr)
+            {
+                if(!array_key_exists($prefixStr,$arr))
+                {
+
+                    $arr[$prefixStr] = array();
+                }
+                $arr = &$arr[$prefixStr];
+            }
+
+            $arr = $value;
+        }
+    }
+
+    return $out;
 }
 
 function request($paramName=false,$default=false)
@@ -165,23 +223,22 @@ function request($paramName=false,$default=false)
 	{
 		$params[$key]=$value;
 	}
-	foreach($_GET as $key=>$value)
-	{
-		$params[$key]=$value;
-	}
-	foreach($params as $key=>$value)
-	{
-		if(str_contains($key,'['))
-		{
-			unset($params[$key]);
-		}
-	}
+    foreach($_GET as $key=>$value)
+    {
+        $params[$key]=$value;
+    }
+    foreach($params as $key=>$value)
+    {
+        if(str_contains($key,'['))
+        {
+            unset($params[$key]);
+        }
+    }
 
-	$params = requestFilter($params);
+    $params = requestFilter($params);
 
 	return $paramName?(isset($params[$paramName])?$params[$paramName]:$default):object($params);
 }
-
 function requestGet($paramName=false,$default=false)
 {
 	global $config;
@@ -261,7 +318,17 @@ function requestGet($paramName=false,$default=false)
 
 function url($params=array(),$mod=array())
 {
-	$names = array();
+	global $config;
+
+	if(isset($GLOBALS['params']))
+	{
+		$names = $GLOBALS['params'];
+	}
+	else
+	{
+		$names = array();
+	}
+
 	$chunks = array();
 
 	foreach($mod as $key=>$value)
@@ -284,10 +351,18 @@ function url($params=array(),$mod=array())
 	return '/'.join('/',$chunks).'/';
 }
 
-function autoload()
+function autoload($paths = null)
 {
 	//    ini_set('unserialize_callback_func','spl_autoload_call');
-	//    spl_autoload_register("_autoload");
+	//
+	if(!is_array($paths) && !is_null($paths) && is_string($paths))
+	{
+		$paths = [$paths];
+	}
+	if(is_array($paths))
+	{
+		ini_set('include_path',join(PATH_SEPARATOR,$paths).PATH_SEPARATOR.ini_get('include_path'));
+	}
 
 	function __autoload($class_name)
 	{
@@ -313,31 +388,7 @@ function autoload()
 
 		require_once $found;
 	}
-}
-
-function _autoload($class_name)
-{
-	$filename = str_replace('_','/',$class_name) . '.php';
-
-	$found = false;
-	foreach(explode(PATH_SEPARATOR,ini_get('include_path')) as $path)
-	{
-		if(file_exists($path.'/'.$filename))
-		{
-			$found = $path.'/'.$filename;
-		}
-	}
-
-	if(!$found)
-	{
-		//			printr($filename);
-		//			$dbg = debug_backtrace();
-		//			printr($dbg);
-
-		throw new Exception('Class '.$class_name.' not found');
-	}
-
-	require_once $found;
+	spl_autoload_register("__autoload");
 }
 
 function is_iterable($obj,$interface=false)
@@ -353,7 +404,45 @@ function is_iterable($obj,$interface=false)
 		;
 }
 
-function array_csort(&$array, $column=0, $order=SORT_ASC)
+function locale($lang)
+{
+	global $config;
+
+	$lang = str_replace('..','',$lang);
+	$lang = str_replace('/','',$lang);
+
+    $locale = array();
+
+	if(file_exists($file = '../locale/'.$lang.'.php'))
+	{
+		require_once $file;
+	}
+	elseif(file_exists($file = '../locale/en_US.php'))
+	{
+		require_once $file;
+	}
+
+	$config->lang = $lang;
+	$config->locale = object($locale);
+}
+
+function __z($ret)
+{
+	global $config;
+
+	if(!isset($config->locale->{$ret}))
+	{
+		file_put_contents(
+			__ROOT.'/locale/'.$config->lang.'.found',
+			"\$locale['{$ret}'] = '{$ret}';\n",
+			FILE_APPEND
+		);
+	}
+
+	return isset($config->locale->$ret)?$config->locale->$ret:$ret;
+}
+
+function array_qsort(&$array, $column=0, $order=SORT_ASC)
 {
 	$dst = array();
 	$sort = array();
@@ -385,13 +474,9 @@ function array_csort(&$array, $column=0, $order=SORT_ASC)
 	$array = $dst;
 }
 
-function now()
+function znow()
 {
 	return date('Y-m-d H:i:s');
-}
-function today()
-{
-	return date('Y-m-d');
 }
 
 function str_endswith($haystack,$needle)
@@ -414,7 +499,19 @@ function backtrace()
 		debug_backtrace()
 	);
 }
-
+function discount($price,$discount)
+{
+	return round($price*((100-$discount)/100),2);
+}
+function format_price($price)
+{
+	return round($price,2);
+}
+function saveSerial($filename,$data)
+{
+	$filename = __ROOT.'/tmp/'.$filename.'.phpserial';
+	file_put_contents($filename,serialize($data));
+}
 function array_merge_recursive_overwrite($arr1, $arr2)
 {
 	foreach($arr2 as $key=>$value)
@@ -434,31 +531,25 @@ function array_merge_recursive_overwrite($arr1, $arr2)
 
 	return $arr1;
 }
-
-function safePath($path)
+function path2array($path,$data=null)
 {
-	$path = preg_replace('/\/+/','/',$path);
-	$path = preg_replace('/\.+/','.',$path);
-	$path = str_replace('/./','/',$path);
-
-	if(str_beginswith($path,'http:/'))
-	{
-		$path = 'http://'.substr($path,6);
-	}
-
-	return $path;
+	return array_reduce(
+		array_reverse(explode('/',trim($path,'/'))),
+		function($sum,$sub)
+		{
+			return array($sub=>$sum);
+		},
+		$data
+	);
 }
 
-function safePathRelative($path)
-{
-	$path = safePath($path);
+function isCli() {
 
-	if(str_beginswith($path,'/'))
-	{
-		$path = substr($path,1);
-	}
-
-	return $path;
+    if(php_sapi_name() == 'cli' && empty($_SERVER['REMOTE_ADDR'])) {
+        return true;
+    } else {
+        return false;
+    }
 }
 
 function parseCLI($argv,$inputs=array())
@@ -510,5 +601,33 @@ function parseCLI($argv,$inputs=array())
         }
 
         return $ret;
+}
+
+function getCols($keys,$level,$cols=array(),$ret=array())
+{
+	//	echo "level={$level},".join(',',$cols)."\n";
+
+	while($key=array_shift($keys))
+	{
+		$colsTmp = $cols;
+		$colsTmp[] = $key;
+
+		if($level > 1)
+		{
+			$ret = getCols($keys,$level-1,$colsTmp,$ret);
+		}
+		else
+		{
+			$ret[] = $colsTmp;
+		}
+	}
+
+	return $ret;
+}
+
+function not_empty($val)
+{
+    $val = trim($val);
+    return !empty($val);
 }
 

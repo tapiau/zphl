@@ -1,7 +1,8 @@
 <?php
+
 /**
-* User: Zbigniew 'zibi' Jarosik <zibi@nora.pl>
-* Date: 27.03.14 11:31
+ * User: Zbigniew 'zibi' Jarosik <zibi@nora.pl>
+ * Date: 27.03.14 11:31
  */
 
 class Cli
@@ -15,6 +16,7 @@ class Cli
 		$this->param = object();
 		$this->flag = object();
 		$this->input = object();
+		$this->post = object();
 	}
 	/**
 	 * @param array $argv
@@ -36,12 +38,38 @@ class Cli
 		return $cli;
 	}
 
+	public function get($path = null)
+	{
+		$param = $this->param;
+
+		if(!is_null($path))
+		{
+			$path = trim($path, '/');
+
+			$chunks = explode('/', $path);
+
+			foreach($chunks as $chunk)
+			{
+				if(isset($param->{$chunk}))
+				{
+					$param = $param->{$chunk};
+				}
+				else
+				{
+					throw new \Exception("Cli::/{$path} not found");
+				}
+			}
+		}
+
+		return $param;
+	}
+
 	/**
 	 * @param Cli $cli
 	 * @param array $inputs
 	 * @return Cli
 	 */
-	static function  parseArgv(Cli $cli, array $inputs)
+	static function parseArgv(Cli $cli, array $inputs)
 	{
 		$argv = $_SERVER['argv'];
 
@@ -153,10 +181,10 @@ class Cli
 				$cli->param->{$key} = $value;
 			}
 		}
-
 		foreach($_POST as $key=>$value)
 		{
 			$cli->param->{$key} = $value;
+			$cli->post->{$key} = $value;
 		}
 		foreach($_GET as $key=>$value)
 		{
@@ -174,5 +202,42 @@ class Cli
 
 		return $cli;
 	}
+// for the future
+//	function requestFilter($tab,$prefix = array())
+//	{
+//		$out = array();
+//
+//		foreach($tab as $key=>$value)
+//		{
+//			if(is_iterable($value))
+//			{
+//				$out[$key] = requestFilter($value);
+//				continue;
+//			}
+//
+//			if(!str_contains($key,'.'))
+//			{
+//				$out[$key] = $value;
+//			}
+//			else
+//			{
+//				$prefixList = explode('.',$key);
+//
+//				$arr = &$out;
+//				foreach($prefixList as $prefixStr)
+//				{
+//					if(!array_key_exists($prefixStr,$arr))
+//					{
+//						$arr[$prefixStr] = array();
+//					}
+//					$arr = &$arr[$prefixStr];
+//				}
+//
+//				$arr = $value;
+//			}
+//		}
+//
+//		return $out;
+//	}
 
 }

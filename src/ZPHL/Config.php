@@ -9,6 +9,7 @@ class Config
 
 	public function __construct($array = array())
 	{
+	    if(is_iterable($array))
 		if(count($array))
 		{
 			self::$config = self::object($array);
@@ -41,7 +42,7 @@ class Config
 		return $config;
 	}
 
-	public static function load($file = null, $stage = 'production')
+	public static function load($file = null, $stage = null)
 	{
 		if(is_null($file))
 		{
@@ -60,7 +61,14 @@ class Config
 
 		$config = self::nesting($config);
 
-		self::$config = self::object($config[$stage]);
+		if(is_null($stage))
+        {
+            self::$config = self::object($config);
+        }
+        else
+        {
+            self::$config = self::object($config[$stage]);
+        }
 
 		return self::$config;
 	}
@@ -103,7 +111,7 @@ class Config
 	{
 		$numeric = self::is_allKeysNumeric($array);
 
-		$obj = $numeric?array():new self(null);
+		$obj = $numeric?array():new Config(null);
 
 		foreach($array as $key => $value)
 		{

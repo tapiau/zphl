@@ -181,17 +181,20 @@ function paranoidError()
 
 // TESTS
 
-function is_iterable($obj,$interface=false)
+if(!function_exists('is_iterable'))
 {
-	return
-		is_object($obj) ?
-			$interface ?
-				array_search('Iterator',class_implements($obj))!==false
-				:
-				true
-			:
-			is_array($obj)
-		;
+    function is_iterable($obj,$interface=false)
+    {
+        return
+            is_object($obj) ?
+                $interface ?
+                    array_search('Iterator',class_implements($obj))!==false
+                    :
+                    true
+                :
+                is_array($obj)
+            ;
+    }
 }
 
 function isCli() {

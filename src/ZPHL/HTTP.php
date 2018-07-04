@@ -1,51 +1,112 @@
 <?php
 
-/**
- * User: Zbigniew 'zibi' Jarosik <zibi@nora.pl>
- * Date: 23.06.14 14:29
- */
-
 namespace ZPHL;
+
+use ZPHL\Exception\HTTP\WrongRequestType;
 
 class HTTP
 {
-	private $referer = null;
-	private $params = array();
-	private $url = null;
-	private $body = null;
-	private $mime = null;
-	private $info = array();
-	private $post = array();
+	private $url = '';
+	private $referer = '';
+	private $type = 'GET';
+	private $paramList = [];
+	private $headers = [];
+	private static $cache = null;
 
-	/**
-	 * @param null $url string
-	 */
-	public function __construct($url = null)
-    {
-        $this->url = $url;
-    }
-
-	/**
-	 * @return null|string
-	 */
-	public function getUrl()
-    {
-		$url = $this->url;
-//		$url = str_replace(' ','%20',$url);
-
-		if(count($this->params))
-		{
-			$url .= '?'.http_build_query($this->params);
-		}
-
-		return $url;
+	public static function setCache($cache)
+	{
+		self::$cache = $cache;
 	}
 
-	/**
-	 * @return $this
-	 */
-	public function request()
+    public function setUrl($url)
+    {
+        $this->url = $url;
+
+		return $this;
+    }
+
+    public function getUrl()
+    {
+        return $this->url;
+    }
+
+	public function setReferer($url)
 	{
+		$this->referer = $url;
+
+		return $this;
+	}
+
+	public function getReferer()
+	{
+		return $this->referer;
+	}
+
+    public function setHeader($name, $value)
+    {
+        $this->headers[$name] = "{$name}: {$value}";
+
+        return $this;
+    }
+
+    public function setParam($name, $value)
+    {
+        $this->paramList[$name] = $value;
+
+		return $this;
+    }
+
+    public function setParams($body)
+    {
+        $this->paramList = $body;
+
+        return $this;
+    }
+
+    public function getParam($name)
+    {
+        return $this->paramList[$name];
+    }
+
+    public function setType($type)
+    {
+		$type = strtoupper($type);
+
+		if(array_search($type,['GET','POST'])===false)
+		{
+			throw new WrongRequestType();
+		}
+
+		$this->type = $type;
+
+		return $this;
+    }
+
+    public function getType()
+    {
+        return $this->type;
+    }
+
+    public function request()
+    {
+		$hash = md5(json_encode([
+			'url'=>$this->getUrl(),
+			'params'=>$this->paramList,
+			'referer'=>$this->referer
+		]));
+
+		if(!is_null(self::$cache))
+		{
+			$page = self::$cache->{$hash};
+
+			if(!is_null($page))
+			{
+//				printrlog("HTTP request from cache");
+
+				return $page;
+			}
+		}
+
 		$ch = curl_init(); // create cURL handle (ch)
 		if (!$ch)
 		{
@@ -59,96 +120,37 @@ class HTTP
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		curl_setopt($ch, CURLOPT_TIMEOUT,        15);
 
-		if(!empty($this->post))
+		if($this->type=='POST')
 		{
 			curl_setopt($ch, CURLOPT_POST, 1);
-			curl_setopt($ch, CURLOPT_POSTFIELDS, $this->post);
+			curl_setopt($ch, CURLOPT_POSTFIELDS, $this->paramList);
 		}
 
 		if(!is_null($this->referer))
 		{
 			curl_setopt($ch, CURLOPT_REFERER, $this->referer);
 		}
+        if(is_array($this->headers))
+        {
+            curl_setopt($ch, CURLOPT_HTTPHEADER, array_values($this->headers));
+        }
 
 		$ret = curl_exec($ch);
 		$c = curl_getinfo($ch);
 
-		$this->body = $ret;
-		$this->mime = $c['content_type'];
-		$this->info = $c;
+		$page = new Webpage();
+		$page->setUrl($this->getUrl());
+		$page->setBody($ret);
+		$page->setMime($c['content_type']);
+		$page->setInfo($c);
 
-		return $this;
-	}
+		if(!is_null(self::$cache))
+		{
+			self::$cache->{$hash} = $page;
+		}
 
-	/**
-	 * @return null|string
-	 */
-	public function setPost($post)
-	{
-		$this->post = $post;
+//		printrlog("HTTP request from web");
 
-		return $this;
-	}
-
-	/**
-	 * @return null|string
-	 */
-	public function getBody()
-	{
-		return $this->body;
-	}
-	/**
-	 * @return null|string
-	 */
-	public function getMime()
-	{
-		return $this->mime;
-	}
-	/**
-	 * @return null|array
-	 */
-	public function getInfo()
-	{
-		return $this->info;
-	}
-
-	/**
-	 * @param null $referer
-	 * @return $this
-	 */
-	public function setReferer($referer = null)
-	{
-		$this->referer = $referer;
-		return $this;
-	}
-
-	/**
-	 * @return null|string
-	 */
-	public function getReferer()
-	{
-		return $this->referer;
-	}
-
-	/**
-	 * @param $key
-	 * @param $value
-	 * @return $this
-	 */
-	public function setParam($key,$value)
-	{
-		$this->params[$key] = $value;
-
-		return $this;
-	}
-
-	/**
-	 * @return array
-	 */
-	public function getParams()
-	{
-		return $this->params;
-	}
-
-
+		return $page;
+    }
 }

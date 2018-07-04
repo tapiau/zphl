@@ -105,6 +105,10 @@ class Str
     {
         return new self(str_ireplace($search,$replace,$this));
     }
+    public function preg_replace($search,$replace)
+    {
+        return new self(preg_replace($search,$replace,$this));
+    }
     public function icmp($str)
     {
         return $this->strcasecmp($this,$str);

@@ -5,7 +5,7 @@
 function object($array=array(),$recursive=true)
 {
 //	$obj = ((object) NULL);
-	$obj = new Object();
+	$obj = new BaseObject();
 	foreach($array as $key=>$value)
 	{
 		if(is_integer($recursive))

@@ -26,7 +26,7 @@ class Cli
 	 */
 	static function parse(array $inputs = array())
 	{
-		$cli = new Cli();
+		$cli = new self();
 
 		if(isCli())
 		{

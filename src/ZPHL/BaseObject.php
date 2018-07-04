@@ -2,7 +2,7 @@
 
 namespace ZPHL;
 
-class Object
+class BaseObject
 {
 	public function __construct($array=array())
 	{
@@ -10,7 +10,7 @@ class Object
 		{
 			if(is_array($value))
 			{
-				$value = new Object($value);
+				$value = new self($value);
 			}
 			$this->$key = $value;
 		}

@@ -103,7 +103,7 @@ class Config
 	{
 		$numeric = self::is_allKeysNumeric($array);
 
-		$obj = $numeric?array():new Config(null);
+		$obj = $numeric?array():new self(null);
 
 		foreach($array as $key => $value)
 		{

@@ -138,5 +138,17 @@ class Collection extends \ArrayObject
             }
             return $r;
         }
+
+        if(array_search($name,['sort','rsort'])!==false)
+        {
+            $array = (array)$this;
+            $newargs=array(&$array);;
+            foreach($args as $arg)
+            {
+                $newargs[]=$arg;
+            }
+            call_user_func_array($name,$newargs);
+            return new self($array);
+        }
     }
 }

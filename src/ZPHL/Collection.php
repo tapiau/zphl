@@ -107,6 +107,11 @@ class Collection extends \ArrayObject
         }
     }
 
+    public function exists($value)
+    {
+        return array_search($value,(array)$this)!==false;
+    }
+
     /**
      * @param $name
      * @param $args

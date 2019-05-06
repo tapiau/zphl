@@ -120,6 +120,8 @@ class HTTP
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		curl_setopt($ch, CURLOPT_TIMEOUT,        15);
 
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // dirty fix for ssl
+
 		if($this->type=='POST')
 		{
 			curl_setopt($ch, CURLOPT_POST, 1);

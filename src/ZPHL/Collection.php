@@ -91,6 +91,22 @@ class Collection extends \ArrayObject
         parent::offsetUnset($offset);
     }
 
+    public function pluck($key, $asKey = null)
+    {
+        if (is_null($asKey)) {
+            return $this->map(function ($item) use ($key) {
+                return ((array)$item)[$key];
+            });
+        } else {
+            return $this->reduce(
+                function ($array, $item) use ($key, $asKey) {
+                    $array[((array)$item)[$asKey]] = ((array)$item)[$key];
+                    return $array;
+                }
+            );
+        }
+    }
+
     /**
      * @param $name
      * @param $args

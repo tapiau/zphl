@@ -1,5 +1,6 @@
 <?php
 
+namespace ZPHL;
 // OBJECT
 
 function object($array=array(),$recursive=true)

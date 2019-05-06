@@ -88,6 +88,7 @@ class StrTest
         'ucfirst'=>["hello world!"],
         'ucwords'=>["hello world!"],
         'wordwrap'=>["hello world!",4,'<br />'],
+        'str_between'=>["Hello world!","el","rl"]
     ];
 
     public function run()

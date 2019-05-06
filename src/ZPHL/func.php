@@ -51,7 +51,7 @@ function str_contains($haystack,$needle)
 function str_between($str,$start,$stop)
 {
     $start = strpos($str,$start)+strlen($start);
-    $stop = strpos($str,$stop);
+    $stop = strpos($str,$stop,$start);
     return substr($str,$start,$stop-$start);
 }
 

@@ -1,7 +1,5 @@
 <?php
 
-namespace ZPHL;
-
 /**
  * User: Zbigniew 'zibi' Jarosik <zibi@nora.pl>
  * Date: 28.08.17 16:56
@@ -11,6 +9,7 @@ namespace ZPHL;
  *
  */
 
+namespace ZPHL;
 
 /**
  * show off @method
@@ -38,7 +37,6 @@ namespace ZPHL;
  * @method Collection keys(mixed $search_value = null, bool $strict = false) Return all the keys or a subset of the keys of an array
  * @method Collection map(callable $callback) Applies the callback to the elements of the given arrays
  * @method Collection merge_recursive(array $array) Merge array recursively
- * @method Collection merge(array $array) Merge array
  * @method Collection multisort(mixed $array1_sort_order = SORT_ASC, mixed $array1_sort_flags = SORT_REGULAR) Sort multi-dimensional arrays
  *
  * @method Collection walk(callback $func) walks through array
@@ -55,37 +53,123 @@ class Collection extends \ArrayObject
 
     public static function fromArray(array $array)
     {
-        return new Collection($array);
+        return new self($array);
+    }
+
+    public static function fromCSV(string $fileName)
+    {
+        $fh = fopen($fileName,"r");
+        $head = fgetcsv($fh);
+
+        while(!feof($fh))
+        {
+            $row = fgetcsv($fh);
+
+            if(is_array($row))
+            {
+                $list[] = array_combine($head,$row);
+            }
+        }
+        fclose($fh);
+
+        return new static($list);
     }
 
     public function toArray()
     {
         return $this->getArrayCopy();
     }
+
     public function values()
     {
         return array_values($this->getArrayCopy());
     }
+
     public function first()
     {
         return reset($this);
     }
+
+    public function groupBy()
+    {
+        $array = $this->getArrayCopy();
+
+        return new self(array_reduce($array, function ($ret, $item) {
+            if (array_key_exists($item, $ret)) {
+                $ret[$item]++;
+            } else {
+                $ret[$item] = 1;
+            }
+
+            return $ret;
+        }, []));
+
+    }
+
+    public function getAverage()
+    {
+        return $this->sum()/$this->count();
+    }
+    public function getAverageWeighted()
+    {
+        return $this->sumWeighted()/$this->sum();
+    }
+
+    public function join($glue='')
+    {
+        return join($glue,$this->getArrayCopy());
+    }
+
     public function last()
     {
         return end($this);
     }
+
     public function key()
     {
         return key($this);
     }
+
+    public function min()
+    {
+        return min($this->getArrayCopy());
+    }
+
+    public function ksort()
+    {
+        $array = $this->getArrayCopy();
+        ksort($array);
+        return self::fromArray($array);
+    }
+
+    public function merge($array = null)
+    {
+        if (is_null($array)) {
+            return new self(
+                array_reduce(
+                    $this->getArrayCopy(),
+                    function ($array, $item) {
+                        $array = array_merge($array, (array)$item);
+                        return $array;
+                    },
+                    []
+                )
+            );
+        } else {
+            return new self(array_merge($this->getArrayCopy(), (array)$array));
+        }
+    }
+
     public function next()
     {
         return next($this);
     }
+
     public function offsetSet($offset, $value)
     {
         parent::offsetSet($offset, $value);
     }
+
     public function offsetUnset($offset)
     {
         parent::offsetUnset($offset);
@@ -107,9 +191,25 @@ class Collection extends \ArrayObject
         }
     }
 
-    public function exists($value)
+    public function reduce($callable, $init = [])
     {
-        return array_search($value,(array)$this)!==false;
+        return self::fromArray(array_reduce($this->getArrayCopy(), $callable, $init));
+    }
+
+    public function sumWeighted()
+    {
+        $ret = 0;
+
+        array_walk($this,function($item, $key) use (&$ret){
+            $ret += $item*$key;
+        });
+
+        return $ret;
+    }
+
+    public function union($array)
+    {
+        return self::fromArray($this->getArrayCopy()+$array);
     }
 
     /**

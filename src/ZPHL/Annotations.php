@@ -14,7 +14,7 @@ class Annotations
 {
     public function __construct($className)
     {
-        $rc = new ReflectionClass($className);
+        $rc = new \ReflectionClass($className);
 
         foreach ($rc->getProperties() as $property)
         {

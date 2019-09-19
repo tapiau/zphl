@@ -169,12 +169,12 @@ function paranoid($error = null)
 	set_error_handler(
 		function ($errno, $errstr, $errfile, $errline)
 		{
-			$exception = new Exception($errstr . '; File: '.$errfile.':'.$errline, $errno);
+			$exception = new \Exception($errstr . '; File: '.$errfile.':'.$errline, $errno);
 			throw $exception;
 		}
 	);
 
-	register_shutdown_function('paranoidError');
+	register_shutdown_function('ZPHL\paranoidError');
 }
 
 function paranoidError()

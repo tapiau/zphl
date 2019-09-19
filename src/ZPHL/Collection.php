@@ -35,7 +35,6 @@ namespace ZPHL;
  * @method Collection intersect(array $array) Computes the intersection of self and array
  * @method bool key_exists(mixed $key) Checks if the given key or index exists in the array
  * @method Collection keys(mixed $search_value = null, bool $strict = false) Return all the keys or a subset of the keys of an array
- * @method Collection map(callable $callback) Applies the callback to the elements of the given arrays
  * @method Collection merge_recursive(array $array) Merge array recursively
  * @method Collection multisort(mixed $array1_sort_order = SORT_ASC, mixed $array1_sort_flags = SORT_REGULAR) Sort multi-dimensional arrays
  *
@@ -210,6 +209,11 @@ class Collection extends \ArrayObject
     public function union($array)
     {
         return self::fromArray($this->getArrayCopy()+$array);
+    }
+    
+    public function map(callable $function)
+    {
+        return Collection::fromArray(array_map($function,$this->getArrayCopy()));
     }
 
     /**

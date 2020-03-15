@@ -101,8 +101,6 @@ class HTTP
 
 			if(!is_null($page))
 			{
-//				printrlog("HTTP request from cache");
-
 				return $page;
 			}
 		}

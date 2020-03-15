@@ -48,11 +48,22 @@ function str_contains($haystack,$needle)
 {
 	return strpos($haystack,$needle)!==false;
 }
-function str_between($str,$start,$stop)
+function str_between($str,$strStart,$strStop)
 {
-    $start = strpos($str,$start)+strlen($start);
-    $stop = strpos($str,$stop,$start);
-    return substr($str,$start,$stop-$start);
+    $posStart = strpos($str,$strStart);
+    $posStop = strpos($str,$strStop,$posStart);
+
+    if($posStart!==false && $posStop!==false)
+    {
+        $posStart += strlen($strStart);
+        $ret = substr($str,$posStart,$posStop-$posStart);
+    }
+    else
+    {
+        $ret = "";
+    }
+
+    return $ret;
 }
 
 // ARRAY
